@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CourtPulse — Dashboard Preview</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --indigo:#4f46e5; --indigo-dark:#4338ca; --zinc-900:#18181b; --zinc-800:#27272a;
+    --zinc-700:#3f3f46; --zinc-500:#71717a; --zinc-400:#a1a1aa; --zinc-300:#d4d4d8;
+    --zinc-200:#e4e4e7; --zinc-100:#f4f4f5; --zinc-50:#fafafa;
+    --amber:#d97706; --amber-bg:#fffbeb; --blue:#2563eb; --blue-bg:#eff6ff;
+    --rose:#e11d48; --rose-bg:#fff1f2; --emerald:#059669; --emerald-bg:#ecfdf5;
+    --violet:#7c3aed; --violet-bg:#f5f3ff;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:var(--zinc-50);color:var(--zinc-900);}
+  a{color:inherit;}
+  .app{display:flex;height:100vh;overflow:hidden;}
+  /* Sidebar */
+  .sidebar{width:250px;flex-shrink:0;background:var(--zinc-900);color:#e4e4e7;display:flex;flex-direction:column;}
+  .brand{display:flex;align-items:center;gap:10px;padding:20px;}
+  .brand-icon{width:32px;height:32px;border-radius:8px;background:var(--indigo);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;}
+  .brand-name{font-size:17px;font-weight:600;}
+  .nav{flex:1;padding:0 12px;display:flex;flex-direction:column;gap:2px;}
+  .nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;color:#d4d4d8;padding:10px 12px;border-radius:6px;font-size:14px;cursor:pointer;font-weight:500;}
+  .nav button:hover{background:var(--zinc-800);color:#fff;}
+  .nav button.active{background:var(--indigo);color:#fff;}
+  .nav hr{border:none;border-top:1px solid var(--zinc-800);margin:10px 0;}
+  .nav .ops{color:#a1a1aa;font-size:13px;}
+  .sidebar-foot{padding:16px 20px;font-size:11px;color:#a1a1aa;border-top:1px solid var(--zinc-800);}
+  /* Mobile sidebar toggle */
+  .menu-btn{display:none;background:none;border:0;cursor:pointer;padding:6px;color:var(--zinc-500);}
+  /* Main */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{height:64px;flex-shrink:0;background:#fff;border-bottom:1px solid var(--zinc-200);display:flex;align-items:center;justify-content:space-between;padding:0 24px;}
+  .topbar h1{font-size:15px;margin:0;font-weight:600;}
+  .topbar p{margin:0;font-size:12px;color:var(--zinc-500);}
+  .role-switch{display:flex;align-items:center;gap:8px;font-size:13px;}
+  .role-switch select{border:1px solid var(--zinc-300);border-radius:6px;padding:6px 8px;font-size:13px;background:#fff;}
+  .content{flex:1;overflow-y:auto;padding:24px;}
+  .view{display:none;}
+  .view.active{display:block;}
+  /* Cards / pills */
+  .pills{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .pill{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--zinc-200);border-radius:10px;padding:10px 16px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .pill .icon{width:32px;height:32px;border-radius:8px;background:var(--blue-bg);color:var(--indigo);display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .pill .num{font-size:18px;font-weight:700;line-height:1;}
+  .pill .lbl{font-size:11px;color:var(--zinc-500);}
+  .card{background:#fff;border:1px solid var(--zinc-200);border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .card-pad{padding:18px;}
+  .row-between{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:6px;border-radius:6px;font-size:14px;font-weight:500;padding:9px 14px;cursor:pointer;border:1px solid transparent;}
+  .btn-primary{background:var(--indigo);color:#fff;}
+  .btn-primary:hover{background:var(--indigo-dark);}
+  .btn-secondary{background:#fff;color:var(--zinc-900);border-color:var(--zinc-300);}
+  .btn-secondary:hover{background:var(--zinc-100);}
+  .btn-danger{background:var(--rose);color:#fff;}
+  .btn-sm{padding:6px 10px;font-size:12.5px;}
+  /* filters */
+  .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  .filters input[type=text], .filters select{border:1px solid var(--zinc-300);border-radius:6px;padding:8px 10px;font-size:13.5px;background:#fff;}
+  .filters input[type=text]{min-width:260px;}
+  .search-wrap{position:relative;}
+  .search-wrap input{padding-left:30px !important;min-width:260px;}
+  .search-wrap .icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--zinc-400);font-size:14px;}
+  /* table */
+  table{width:100%;border-collapse:collapse;}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--zinc-500);background:var(--zinc-50);padding:10px 14px;border-bottom:1px solid var(--zinc-200);}
+  tbody td{padding:13px 14px;border-bottom:1px solid var(--zinc-100);font-size:13.5px;vertical-align:top;}
+  tbody tr:hover{background:var(--zinc-50);cursor:pointer;}
+  .case-party{font-weight:600;font-size:13.5px;}
+  .case-sub{font-size:12px;color:var(--zinc-500);}
+  .badge{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600;white-space:nowrap;}
+  .badge-call_time_near{background:var(--amber-bg);color:var(--amber);}
+  .badge-taken_up{background:var(--blue-bg);color:var(--blue);}
+  .badge-adjourned{background:var(--zinc-100);color:var(--zinc-700);}
+  .badge-passed_over{background:var(--rose-bg);color:var(--rose);}
+  .badge-order_passed{background:var(--emerald-bg);color:var(--emerald);}
+  .badge-awaiting_next_date{background:var(--violet-bg);color:var(--violet);}
+  .banner{display:flex;gap:10px;background:var(--amber-bg);color:#92400e;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:16px;}
+  .empty{text-align:center;padding:50px 20px;border:1.5px dashed var(--zinc-300);border-radius:10px;color:var(--zinc-500);font-size:13.5px;}
+  /* modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(24,24,27,.45);z-index:50;align-items:center;justify-content:center;}
+  .overlay.active{display:flex;}
+  .modal{background:#fff;border-radius:12px;max-width:480px;width:92%;max-height:86vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,.2);}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--zinc-100);}
+  .modal-head h3{margin:0;font-size:15.5px;}
+  .modal-close{background:none;border:0;font-size:18px;cursor:pointer;color:var(--zinc-400);}
+  .modal-body{padding:18px 20px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13px;font-weight:500;margin-bottom:5px;color:var(--zinc-700);}
+  .field input, .field select{width:100%;padding:8px 10px;border:1px solid var(--zinc-300);border-radius:6px;font-size:13.5px;}
+  .modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--zinc-100);}
+  /* grid */
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  /* notifications */
+  .notif{display:flex;justify-content:space-between;gap:10px;padding:14px 16px;border-bottom:1px solid var(--zinc-100);flex-wrap:wrap;}
+  .notif:last-child{border-bottom:none;}
+  .notif-status{display:flex;align-items:center;gap:8px;}
+  /* toggle */
+  .toggle{width:42px;height:24px;border-radius:999px;background:var(--zinc-200);position:relative;cursor:pointer;border:none;flex-shrink:0;}
+  .toggle.on{background:var(--indigo);}
+  .toggle .dot{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s;}
+  .toggle.on .dot{left:20px;}
+  .setting-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--zinc-100);font-size:13.5px;}
+  .setting-row:last-child{border-bottom:none;}
+  .timeline-item{display:flex;gap:10px;padding-bottom:16px;position:relative;}
+  .timeline-dot{width:9px;height:9px;border-radius:50%;background:var(--indigo);margin-top:5px;flex-shrink:0;}
+  .stale{font-size:11px;color:var(--zinc-400);}
+  @media(max-width:880px){
+    .sidebar{position:fixed;left:-260px;top:0;bottom:0;z-index:60;transition:left .2s;}
+    .sidebar.open{left:0;}
+    .menu-btn{display:block;}
+    .grid-2,.grid-3{grid-template-columns:1fr;}
+    table thead{display:none;}
+    table, tbody, tr, td{display:block;width:100%;}
+    tbody tr{border:1px solid var(--zinc-200);border-radius:10px;margin-bottom:10px;padding:6px;}
+    tbody td{border:none;padding:6px 8px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-icon">⚖</div><div class="brand-name">CourtPulse</div></div>
+    <div class="nav">
+      <button class="nav-btn active" data-view="dashboard">📋 Case Dashboard</button>
+      <button class="nav-btn" data-view="partner">👥 Partner Summary</button>
+      <button class="nav-btn" data-view="notifications">🔔 Notifications</button>
+      <button class="nav-btn" data-view="settings">⚙️ Settings</button>
+      <hr>
+      <button class="nav-btn ops" data-view="review">🗂 Extraction Review (Ops)</button>
+    </div>
+    <div class="sidebar-foot">MVP scope: 4 courts tracked<br>data may lag source portals</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+        <div><h1 id="pageTitle">Case Dashboard</h1><p>Rao &amp; Associates</p></div>
+      </div>
+      <div class="role-switch">
+        View as:
+        <select id="roleSelect" onchange="setRole(this.value)">
+          <option value="associate">Associate / Clerk</option>
+          <option value="partner">Partner</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="view active" id="view-dashboard">
+        <div class="row-between">
+          <div class="pills">
+            <div class="pill"><div class="icon">📅</div><div><div class="num" id="hearingsToday">0</div><div class="lbl">Hearings today</div></div></div>
+            <div class="pill"><div class="icon">🔄</div><div><div class="num" id="updated24h">0</div><div class="lbl">Updated in 24h</div></div></div>
+          </div>
+          <button class="btn btn-primary" onclick="openAddCase()">+ Add Case</button>
+        </div>
+
+        <div class="banner" id="staleBanner"></div>
+
+        <div class="filters">
+          <div class="search-wrap"><span class="icon">🔍</span><input type="text" id="searchBox" placeholder="Search by party, advocate, case or CNR number" oninput="renderTable()"></div>
+          <select id="courtFilter" onchange="renderTable()"></select>
+          <select id="statusFilter" onchange="renderTable()">
+            <option value="all">All statuses</option>
+            <option value="call_time_near">Call time near</option>
+            <option value="taken_up">Taken up</option>
+            <option value="adjourned">Adjourned</option>
+            <option value="passed_over">Passed over</option>
+            <option value="order_passed">Order passed</option>
+            <option value="awaiting_next_date">Awaiting next date</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Clear filters</button>
+        </div>
+
+        <div class="card">
+          <table>
+            <thead><tr><th>Party / Case</th><th>Court</th><th>Status</th><th>Next date</th><th>Updated</th></tr></thead>
+            <tbody id="caseTableBody"></tbody>
+          </table>
+          <div class="empty" id="emptyState" style="display:none;">No cases match these filters.</div>
+        </div>
+      </div>
+
+      <!-- PARTNER SUMMARY -->
+      <div class="view" id="view-partner">
+        <div class="grid-3" style="margin-bottom:16px;">
+          <div class="card card-pad"><div class="lbl" style="font-size:12px;color:var(--zinc-500);">Total cases tracked</div><div style="font-size:22px;font-weight:700;" id="statTotal">0</div></div>
+          <div class="card card-pad"><div class="lbl" style="font-size:12px;color:var(--zinc-500);">Cases with upcoming hearings</div><div style="font-size:22px;font-weight:700;" id="statUpcoming">0</div></div>
+          <div class="card card-pad"><div class="lbl" style="font-size:12px;color:var(--zinc-500);">Alert delivery reliability (30d)</div><div style="font-size:22px;font-weight:700;">96%</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="card card-pad"><h3 style="margin:0 0 10px;font-size:14px;">Cases by status</h3><canvas id="statusChart" height="180"></canvas></div>
+          <div class="card card-pad"><h3 style="margin:0 0 10px;font-size:14px;">Alert reliability — last 30 days</h3><canvas id="reliabilityChart" height="180"></canvas></div>
+        </div>
+        <div class="card card-pad">
+          <h3 style="margin:0 0 10px;font-size:14px;">Breakdown by court</h3>
+          <table><thead><tr><th>Court</th><th>Active cases</th><th>Upcoming</th></tr></thead><tbody id="courtBreakdownBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- NOTIFICATIONS -->
+      <div class="view" id="view-notifications">
+        <div class="card" id="notifList"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="view" id="view-settings">
+        <div class="card card-pad" style="max-width:520px;">
+          <h3 style="margin-top:0;font-size:14px;">Notification preferences</h3>
+          <div class="setting-row">WhatsApp <button class="toggle on" onclick="this.classList.toggle('on')"><span class="dot"></span></button></div>
+          <div class="setting-row">SMS <button class="toggle on" onclick="this.classList.toggle('on')"><span class="dot"></span></button></div>
+          <div class="setting-row">Email <button class="toggle on" onclick="this.classList.toggle('on')"><span class="dot"></span></button></div>
+          <div class="setting-row">Push <button class="toggle" onclick="this.classList.toggle('on')"><span class="dot"></span></button></div>
+        </div>
+      </div>
+
+      <!-- REVIEW QUEUE -->
+      <div class="view" id="view-review">
+        <div class="banner" style="background:var(--zinc-100);color:var(--zinc-700);border-color:var(--zinc-200);">🛡 Internal operations tool — not visible to law firm users.</div>
+        <div class="card">
+          <table><thead><tr><th>Court</th><th>Matched case</th><th>Confidence</th></tr></thead><tbody id="reviewBody"></tbody></table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add Case Modal -->
+<div class="overlay" id="addCaseOverlay">
+  <div class="modal">
+    <div class="modal-head"><h3>Add Case</h3><button class="modal-close" onclick="closeModal('addCaseOverlay')">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>CNR number (optional if case number provided)</label><input id="newCnr" placeholder="e.g. DLHC010012342024"></div>
+      <div class="field"><label>Case number (optional if CNR provided)</label><input id="newCaseNum" placeholder="e.g. WP(C) 4521/2024"></div>
+      <div class="field"><label>Party name</label><input id="newParty" placeholder="e.g. Meridian Textiles Ltd. vs Union of India"></div>
+      <div class="field"><label>Court</label><select id="newCourt"></select></div>
+      <p id="addCaseError" style="color:var(--rose);font-size:13px;display:none;"></p>
+    </div>
+    <div class="modal-foot"><button class="btn btn-secondary" onclick="closeModal('addCaseOverlay')">Cancel</button><button class="btn btn-primary" onclick="submitAddCase()">Add Case</button></div>
+  </div>
+</div>
+
+<!-- Case Detail Modal -->
+<div class="overlay" id="caseDetailOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head"><h3 id="detailTitle">Case</h3><button class="modal-close" onclick="closeModal('caseDetailOverlay')">✕</button></div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
+</div>
+
+<script>
+const COURTS = [
+  {id:"court-1", name:"Delhi High Court", city:"Delhi"},
+  {id:"court-2", name:"Bombay High Court", city:"Mumbai"},
+  {id:"court-3", name:"Saket District Court", city:"Delhi"},
+  {id:"court-4", name:"City Civil Court", city:"Bengaluru"},
+];
+const STATUS_LABEL = {call_time_near:"Call time near", taken_up:"Taken up", adjourned:"Adjourned", passed_over:"Passed over", order_passed:"Order passed", awaiting_next_date:"Awaiting next date"};
+
+let cases = [
+  {id:"c1", party:"Meridian Textiles Ltd. vs Union of India", caseNo:"WP(C) 4521/2024", court:"court-1", status:"call_time_near", nextDate:"2026-07-08", updated:"2026-07-06T09:15:00", stale:false,
+   timeline:[["Call time near","2026-07-06 09:15"],["Adjourned — next date 08.07.2026","2026-06-24 11:05"],["Taken up","2026-06-24 10:40"]]},
+  {id:"c2", party:"Kavya Exports vs Northline Shipping", caseNo:"Comm Appeal 112/2024", court:"court-2", status:"adjourned", nextDate:"2026-07-21", updated:"2026-07-05T14:40:00", stale:false,
+   timeline:[["Adjourned — next date 21.07.2026","2026-07-05 14:40"]]},
+  {id:"c3", party:"State Bank Consortium vs Harish Buildtech", caseNo:"CS 889/2023", court:"court-3", status:"taken_up", nextDate:"2026-07-06", updated:"2026-07-06T10:02:00", stale:false,
+   timeline:[["Taken up — arguments part-heard","2026-07-06 10:02"]]},
+  {id:"c4", party:"Ramesh Iyer vs Bengaluru Development Authority", caseNo:"OS 221/2024", court:"court-4", status:"passed_over", nextDate:"2026-07-09", updated:"2026-07-06T08:50:00", stale:true,
+   timeline:[["Passed over — next date 09.07.2026","2026-07-06 08:50"]]},
+  {id:"c5", party:"Union of India vs Deepak Malhotra", caseNo:"CRL.A 902/2024", court:"court-1", status:"order_passed", nextDate:null, updated:"2026-07-04T16:20:00", stale:false,
+   timeline:[["Order passed","2026-07-04 16:20"]]},
+  {id:"c6", party:"Coastal Pharma Pvt Ltd vs Zenith Logistics", caseNo:"IA 5567/2026", court:"court-2", status:"awaiting_next_date", nextDate:null, updated:"2026-07-06T07:30:00", stale:false,
+   timeline:[["Awaiting next date","2026-07-06 07:30"]]},
+];
+
+let notifications = [
+  {case:"Meridian Textiles Ltd. vs Union of India", type:"Call time near", channel:"WhatsApp", status:"delivered", time:"2026-07-06 09:16"},
+  {case:"State Bank Consortium vs Harish Buildtech", type:"Taken up", channel:"WhatsApp", status:"delivered", time:"2026-07-06 10:03"},
+  {case:"Ramesh Iyer vs Bengaluru Development Authority", type:"Passed over", channel:"SMS", status:"failed", time:"2026-07-06 08:51", reason:"WhatsApp number not verified; fell back to SMS, carrier rejected message"},
+  {case:"Kavya Exports vs Northline Shipping", type:"Adjourned", channel:"Email", status:"delivered", time:"2026-07-05 14:41"},
+  {case:"Coastal Pharma Pvt Ltd vs Zenith Logistics", type:"Adjourned", channel:"WhatsApp", status:"queued", time:"2026-07-06 11:00"},
+];
+
+const reviewQueue = [
+  {court:"City Civil Court", matched:"Ramesh Iyer vs Bengaluru Development Authority", confidence:71},
+  {court:"Bombay High Court", matched:"Unmatched — Comm Suit 77/2026", confidence:58},
+  {court:"Delhi High Court", matched:"Illegible board entry", confidence:32},
+];
+
+let currentRole = "associate";
+
+function setRole(role){ currentRole = role; renderAll(); }
+
+function courtName(id){ const c = COURTS.find(x=>x.id===id); return c ? c.name+" — "+c.city : "Unknown"; }
+
+function initFilters(){
+  const cf = document.getElementById('courtFilter');
+  cf.innerHTML = '<option value="all">All courts</option>' + COURTS.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  const nc = document.getElementById('newCourt');
+  nc.innerHTML = COURTS.map(c=>`<option value="${c.id}">${c.name} — ${c.city}</option>`).join('');
+}
+
+function clearFilters(){
+  document.getElementById('searchBox').value='';
+  document.getElementById('courtFilter').value='all';
+  document.getElementById('statusFilter').value='all';
+  renderTable();
+}
+
+function fuzzy(hay, q){ if(!q) return true; return hay.toLowerCase().includes(q.toLowerCase()); }
+
+function renderTable(){
+  const q = document.getElementById('searchBox').value;
+  const court = document.getElementById('courtFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  let list = cases.filter(c=>
+    (court==='all'||c.court===court) &&
+    (status==='all'||c.status===status) &&
+    fuzzy(c.party+" "+c.caseNo, q)
+  ).sort((a,b)=> (a.nextDate||'9999').localeCompare(b.nextDate||'9999'));
+
+  const body = document.getElementById('caseTableBody');
+  const empty = document.getElementById('emptyState');
+  if(list.length===0){ body.innerHTML=''; empty.style.display='block'; }
+  else {
+    empty.style.display='none';
+    body.innerHTML = list.map(c=>`
+      <tr onclick="openCaseDetail('${c.id}')">
+        <td><div class="case-party">${c.party}</div><div class="case-sub">${c.caseNo}</div></td>
+        <td>${courtName(c.court)}</td>
+        <td><span class="badge badge-${c.status}">${STATUS_LABEL[c.status]}</span></td>
+        <td>${c.nextDate || '—'}</td>
+        <td class="stale">${timeAgo(c.updated)}</td>
+      </tr>`).join('');
+  }
+
+  document.getElementById('hearingsToday').textContent = cases.filter(c=>c.nextDate==='2026-07-06').length;
+  document.getElementById('updated24h').textContent = cases.filter(c=>(new Date('2026-07-06T12:00:00')-new Date(c.updated))/36e5 < 24).length;
+
+  const staleCase = cases.find(c=>c.stale);
+  const banner = document.getElementById('staleBanner');
+  if(staleCase){ banner.style.display='flex'; banner.innerHTML = `⚠️ Board data for the court handling <strong>&nbsp;${staleCase.party}&nbsp;</strong> hasn't updated since ${fmt(staleCase.updated)} — showing last known status.`; }
+  else banner.style.display='none';
+}
+
+function timeAgo(iso){
+  const d = new Date('2026-07-06T12:00:00') - new Date(iso);
+  const hrs = Math.round(d/36e5);
+  if(hrs<1) return 'just now';
+  if(hrs<24) return hrs+'h ago';
+  return Math.round(hrs/24)+'d ago';
+}
+function fmt(iso){ const d=new Date(iso); return d.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }
+
+function openAddCase(){ document.getElementById('addCaseError').style.display='none'; document.getElementById('newCnr').value=''; document.getElementById('newCaseNum').value=''; document.getElementById('newParty').value=''; document.getElementById('addCaseOverlay').classList.add('active'); }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+
+function submitAddCase(){
+  const cnr = document.getElementById('newCnr').value.trim();
+  const caseNo = document.getElementById('newCaseNum').value.trim();
+  const party = document.getElementById('newParty').value.trim();
+  const court = document.getElementById('newCourt').value;
+  const err = document.getElementById('addCaseError');
+  if(party.length<2 || (!cnr && !caseNo)){
+    err.textContent = 'Enter a party name and at least a CNR or case number.';
+    err.style.display='block';
+    return;
+  }
+  const id = 'c'+Date.now();
+  cases.unshift({id, party, caseNo: caseNo||cnr, court, status:'awaiting_next_date', nextDate:null, updated:new Date().toISOString(), stale:false, timeline:[["Case added to CourtPulse", "just now"]]});
+  closeModal('addCaseOverlay');
+  renderTable();
+  renderPartner();
+}
+
+function openCaseDetail(id){
+  const c = cases.find(x=>x.id===id);
+  document.getElementById('detailTitle').textContent = c.party;
+  document.getElementById('detailBody').innerHTML = `
+    <p style="font-size:13px;color:var(--zinc-500);margin:0 0 4px;">${c.caseNo} · ${courtName(c.court)}</p>
+    <p style="margin:0 0 14px;"><span class="badge badge-${c.status}">${STATUS_LABEL[c.status]}</span></p>
+    <h4 style="font-size:13.5px;margin:0 0 10px;">Case timeline</h4>
+    ${c.timeline.map(t=>`<div class="timeline-item"><div class="timeline-dot"></div><div><div style="font-size:13.5px;font-weight:500;">${t[0]}</div><div style="font-size:12px;color:var(--zinc-400);">${t[1]}</div></div></div>`).join('')}
+    ${c.nextDate ? `<button class="btn btn-secondary btn-sm" onclick="alert('Opens the Virtual Hearing Companion — link validation, connectivity check, backup dial-in, queue position.')">🎥 Open Hearing Prep</button>` : ''}
+  `;
+  document.getElementById('caseDetailOverlay').classList.add('active');
+}
+
+function renderPartner(){
+  document.getElementById('statTotal').textContent = cases.length;
+  document.getElementById('statUpcoming').textContent = cases.filter(c=>c.nextDate).length;
+
+  const body = document.getElementById('courtBreakdownBody');
+  body.innerHTML = COURTS.map(court=>{
+    const cc = cases.filter(c=>c.court===court.id);
+    const up = cc.filter(c=>c.status==='call_time_near'||c.status==='taken_up').length;
+    return `<tr><td>${court.name} <span class="stale">${court.city}</span></td><td>${cc.length}</td><td>${up}</td></tr>`;
+  }).join('');
+}
+
+function renderNotifications(){
+  document.getElementById('notifList').innerHTML = notifications.map((n,i)=>`
+    <div class="notif">
+      <div>
+        <div style="font-weight:500;font-size:13.5px;">${n.type}</div>
+        <div style="font-size:13px;color:var(--indigo);">${n.case}</div>
+        <div class="stale">${n.time} · ${n.channel}</div>
+        ${n.status==='failed'?`<div style="font-size:12px;color:var(--rose);margin-top:2px;">${n.reason}</div>`:''}
+      </div>
+      <div class="notif-status">
+        <span class="badge ${n.status==='delivered'?'badge-order_passed':n.status==='failed'?'badge-passed_over':'badge-adjourned'}">${n.status}</span>
+        ${n.status==='failed'?`<button class="btn btn-secondary btn-sm" onclick="retryNotif(${i})">↻ Retry</button>`:''}
+      </div>
+    </div>`).join('');
+}
+function retryNotif(i){ notifications[i].status='delivered'; notifications[i].time='just now'; delete notifications[i].reason; renderNotifications(); }
+
+function renderReview(){
+  document.getElementById('reviewBody').innerHTML = reviewQueue.map(r=>`
+    <tr><td>${r.court}</td><td>${r.matched}</td><td><span class="badge ${r.confidence>=80?'badge-order_passed':r.confidence>=60?'badge-call_time_near':'badge-passed_over'}">${r.confidence}%</span></td></tr>
+  `).join('');
+}
+
+let statusChartInstance, reliabilityChartInstance;
+function renderCharts(){
+  const counts = {};
+  cases.forEach(c=>{ counts[c.status]=(counts[c.status]||0)+1; });
+  const labels = Object.keys(counts).map(k=>STATUS_LABEL[k]);
+  const data = Object.values(counts);
+  const colors = {call_time_near:'#d97706',taken_up:'#2563eb',adjourned:'#71717a',passed_over:'#e11d48',order_passed:'#059669',awaiting_next_date:'#7c3aed'};
+  const bg = Object.keys(counts).map(k=>colors[k]);
+
+  if(statusChartInstance) statusChartInstance.destroy();
+  statusChartInstance = new Chart(document.getElementById('statusChart'), {
+    type:'doughnut', data:{ labels, datasets:[{data, backgroundColor:bg}] },
+    options:{ plugins:{legend:{position:'right', labels:{font:{size:11}}}} }
+  });
+
+  if(reliabilityChartInstance) reliabilityChartInstance.destroy();
+  reliabilityChartInstance = new Chart(document.getElementById('reliabilityChart'), {
+    type:'line',
+    data:{ labels:['Jun 08','Jun 13','Jun 18','Jun 23','Jun 28','Jul 03','Jul 06'],
+      datasets:[{ label:'Reliability %', data:[96,94,97,91,95,98,96], borderColor:'#4f46e5', backgroundColor:'rgba(79,70,229,.1)', tension:.3, fill:true }] },
+    options:{ scales:{ y:{ min:80, max:100 } }, plugins:{legend:{display:false}} }
+  });
+}
+
+// Nav
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    const titles = {dashboard:'Case Dashboard', partner:'Partner Summary', notifications:'Notifications & Alert History', settings:'Settings', review:'Extraction Review Queue'};
+    document.getElementById('pageTitle').textContent = titles[btn.dataset.view];
+    document.getElementById('sidebar').classList.remove('open');
+  });
+});
+
+function renderAll(){
+  initFilters();
+  renderTable();
+  renderPartner();
+  renderNotifications();
+  renderReview();
+  renderCharts();
+}
+renderAll();
+</script>
+</body>
+</html>
